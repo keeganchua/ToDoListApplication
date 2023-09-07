@@ -20,6 +20,7 @@ public class TaskItem {
         return name;
     }
     
+    // Set task completion status
     public void setCompleted(boolean completed) {
     	this.completed = completed;
     }

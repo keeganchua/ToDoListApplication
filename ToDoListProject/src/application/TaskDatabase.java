@@ -104,7 +104,7 @@ public class TaskDatabase {
             e.printStackTrace();
         }
 
-        // Find the maximum ID in the list
+        // Find the highest ID number in the list
         if(!idList.isEmpty()) {
         	int maxId = 0;
             for(int id : idList) {

@@ -59,7 +59,7 @@ public class Main extends Application {
         primaryStage.setTitle("To-Do List App");
         primaryStage.show();
         
-     // Set the items of the ListView
+        // Set the items of the ListView
         taskListView.setItems(tasks);
         taskListView.setCellFactory(param -> new ListCell<TaskItem>() {
             @Override
