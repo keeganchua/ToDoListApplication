@@ -11,31 +11,41 @@ import javafx.stage.Stage;
 
 public class Main extends Application {
 
-    private ListView<TaskItem> taskListView;
+    private ObservableList<TaskItem> tasks = FXCollections.observableArrayList();
+    private TaskDatabase taskDatabase;
     private TextField taskInputField;
-
+    private ListView<TaskItem> taskListView;
+    
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
     public void start(Stage primaryStage) {
-        // Create UI elements
+    	
+    	// Initialize the database
+        String currentDirectory = System.getProperty("user.dir");
+        taskDatabase = new TaskDatabase(currentDirectory + "\\todolist-database.db");
+
+        // Load tasks from the database and populate the tasks list
+        tasks.addAll(taskDatabase.getAllTasks());
+
+    	// Create UI elements
         taskInputField = new TextField();
         Button addButton = new Button("Add");
         Button deleteButton = new Button("Delete");
         Button clearCompletedButton = new Button("Clear Completed");
-        taskListView = new ListView<>();
-        ObservableList<TaskItem> tasks = FXCollections.observableArrayList();
-
+        taskListView = new ListView<>(tasks);
+        
         // Handle add button click
-        addButton.setOnAction(e -> addTask(tasks));
+        addButton.setOnAction(e -> addTask());
 
         // Handle delete button click
-        deleteButton.setOnAction(e -> deleteTask(tasks));
+        deleteButton.setOnAction(e -> deleteTask());
         
         // Handle clear completed button click
-        clearCompletedButton.setOnAction(e -> clearCompletedTasks(tasks));
+        clearCompletedButton.setOnAction(e -> clearCompletedTasks());
+        
         // Create layout
         VBox root = new VBox(10); // VBox with spacing
         HBox buttonBox = new HBox(10); // HBox for buttons
@@ -48,8 +58,8 @@ public class Main extends Application {
         primaryStage.setScene(scene);
         primaryStage.setTitle("To-Do List App");
         primaryStage.show();
-
-        // Set the items of the ListView
+        
+     // Set the items of the ListView
         taskListView.setItems(tasks);
         taskListView.setCellFactory(param -> new ListCell<TaskItem>() {
             @Override
@@ -61,29 +71,50 @@ public class Main extends Application {
                 } else {
                     CheckBox checkBox = new CheckBox(task.getName());
                     checkBox.setSelected(task.isCompleted());
-                    checkBox.setOnAction(event -> task.setCompleted(checkBox.isSelected()));
+                    checkBox.setOnAction(event -> { 
+                    boolean completed = checkBox.isSelected();
+                    task.setCompleted(completed);
+                    
+                    // Update the completion status in the database
+                    taskDatabase.updateTaskCompletionStatus(task.getId(), completed);
+                });
                     setGraphic(checkBox);
                 }
             }
         });
-    }
 
-    private void addTask(ObservableList<TaskItem> tasks) {
-        String taskName = taskInputField.getText().trim();
+    }
+    
+    private void addTask() {
+    	String taskName = taskInputField.getText().trim();
         if (!taskName.isEmpty()) {
-            tasks.add(new TaskItem(taskName));
-            taskInputField.clear();
-        }
-    }
-
-    private void deleteTask(ObservableList<TaskItem> tasks) {
-        int selectedIndex = taskListView.getSelectionModel().getSelectedIndex();
-        if (selectedIndex >= 0) {
-            tasks.remove(selectedIndex);
+            TaskItem newTask = new TaskItem(taskDatabase.getLastAssignedId() + 1, taskName, false); 
+            tasks.add(newTask);
+            taskDatabase.addTask(newTask); // Add task to the database
+            taskInputField.clear(); // Clear the text field
         }
     }
     
-    private void clearCompletedTasks(ObservableList<TaskItem> tasks) {
-        tasks.removeIf(TaskItem::isCompleted);
+    private void deleteTask() {
+    	TaskItem selectedTask = taskListView.getSelectionModel().getSelectedItem();
+        if (selectedTask != null) {
+            tasks.remove(selectedTask);
+            taskDatabase.deleteTask(selectedTask); // Delete task from the database
+        }
     }
+    
+    private void clearCompletedTasks() {
+    	tasks.removeIf(task -> {
+            if (task.isCompleted()) {
+                // Remove completed task from the database
+                taskDatabase.deleteTask(task);
+                return true; // Remove from the displayed list
+            }
+            return false; // Keep in the displayed list
+        });
+    }
+    
 }
+
+
+
